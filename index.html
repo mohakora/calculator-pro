@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>تسجيل الدخول | حاسبة مساحات الأراضي الزراعية</title>
+<meta name="description" content="بوابة الدخول إلى حاسبة مساحات الأراضي الزراعية الاحترافية"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#F6F1E4;
+    --surface:#FFFFFF;
+    --ink:#24321F;
+    --ink-soft:#5B6552;
+    --green-deep:#1E4430;
+    --green:#2F6B45;
+    --gold:#C79A3B;
+    --gold-light:#E8C97A;
+    --line:#E2D6AF;
+    --error:#B3422A;
+    --radius:16px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    font-family:'Tajawal',sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+    min-height:100dvh;
+  }
+  .shell{
+    min-height:100vh;
+    min-height:100dvh;
+    display:flex;
+  }
+
+  /* ---------- اللوحة اليسرى: الهوية + الخلفية الشبكية ---------- */
+  .brand-pane{
+    flex:1 1 46%;
+    position:relative;
+    background:linear-gradient(160deg,var(--green-deep) 0%,#16331F 100%);
+    color:#F6F1E4;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    padding:clamp(28px,5vw,64px);
+    overflow:hidden;
+    min-height:320px;
+  }
+  .plot-grid{
+    position:absolute; inset:0;
+    opacity:.16;
+    pointer-events:none;
+  }
+  .brand-top{ position:relative; z-index:1; display:flex; align-items:center; gap:12px; }
+  .brand-mark{
+    width:42px;height:42px;border-radius:10px;
+    background:linear-gradient(135deg,var(--gold-light),var(--gold));
+    display:flex;align-items:center;justify-content:center;
+    font-family:'El Messiri',serif; font-weight:700; color:var(--green-deep); font-size:1.3rem;
+    flex:none;
+  }
+  .brand-name{ font-family:'El Messiri',serif; font-weight:600; font-size:1.15rem; letter-spacing:.3px; }
+
+  .brand-mid{ position:relative; z-index:1; margin-top:auto; margin-bottom:auto; padding:40px 0; }
+  .brand-mid h1{
+    font-family:'El Messiri',serif;
+    font-weight:700;
+    font-size:clamp(1.9rem,3.6vw,2.7rem);
+    line-height:1.25;
+    margin-bottom:18px;
+  }
+  .brand-mid p{
+    font-size:1.05rem;
+    color:#D9D2BC;
+    max-width:46ch;
+    line-height:1.8;
+  }
+  .gold-rule{ width:64px; height:3px; background:var(--gold); border-radius:3px; margin:22px 0; }
+
+  .brand-stats{ position:relative; z-index:1; display:flex; gap:28px; flex-wrap:wrap; }
+  .brand-stat strong{ display:block; font-size:1.5rem; font-family:'El Messiri',serif; color:var(--gold-light); }
+  .brand-stat span{ font-size:.85rem; color:#C7C0A8; }
+
+  /* ---------- اللوحة اليمنى: نموذج الدخول ---------- */
+  .form-pane{
+    flex:1 1 54%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:clamp(24px,5vw,56px);
+  }
+  .card{
+    width:100%;
+    max-width:430px;
+  }
+  .card h2{
+    font-family:'El Messiri',serif;
+    font-size:1.6rem;
+    font-weight:700;
+    margin-bottom:6px;
+  }
+  .card .sub{ color:var(--ink-soft); font-size:.95rem; margin-bottom:26px; }
+
+  .tabs{
+    display:flex;
+    background:#EFE7D2;
+    border-radius:12px;
+    padding:4px;
+    margin-bottom:26px;
+  }
+  .tab-btn{
+    flex:1;
+    border:none;
+    background:transparent;
+    padding:11px 8px;
+    font-family:'Tajawal',sans-serif;
+    font-weight:700;
+    font-size:.93rem;
+    color:var(--ink-soft);
+    border-radius:9px;
+    cursor:pointer;
+    transition:.2s;
+  }
+  .tab-btn.active{
+    background:var(--surface);
+    color:var(--green-deep);
+    box-shadow:0 3px 10px rgba(0,0,0,.08);
+  }
+
+  .field{ margin-bottom:16px; }
+  .field label{
+    display:block;
+    font-size:.88rem;
+    font-weight:700;
+    color:var(--ink);
+    margin-bottom:7px;
+  }
+  .field input{
+    width:100%;
+    padding:13px 16px;
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    font-family:'Tajawal',sans-serif;
+    font-size:1rem;
+    background:var(--surface);
+    color:var(--ink);
+    transition:.15s;
+  }
+  .field input:focus{
+    outline:none;
+    border-color:var(--green);
+    box-shadow:0 0 0 3px rgba(47,107,69,.14);
+  }
+  .field .hint{ font-size:.78rem; color:var(--ink-soft); margin-top:5px; }
+
+  .btn-primary{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:10px;
+    background:linear-gradient(135deg,var(--green),var(--green-deep));
+    color:#fff;
+    font-family:'Tajawal',sans-serif;
+    font-weight:700;
+    font-size:1.02rem;
+    cursor:pointer;
+    transition:.2s;
+    margin-top:6px;
+  }
+  .btn-primary:hover{ filter:brightness(1.07); }
+  .btn-primary:disabled{ opacity:.6; cursor:not-allowed; }
+
+  .btn-link{
+    width:100%;
+    background:none;
+    border:none;
+    color:var(--ink-soft);
+    font-size:.86rem;
+    margin-top:14px;
+    cursor:pointer;
+    text-decoration:underline;
+    text-underline-offset:3px;
+  }
+
+  .msg{
+    margin-top:14px;
+    padding:11px 14px;
+    border-radius:10px;
+    font-size:.88rem;
+    font-weight:600;
+    display:none;
+  }
+  .msg.show{ display:block; }
+  .msg.ok{ background:#E4F1E6; color:var(--green-deep); }
+  .msg.err{ background:#FBE5DF; color:var(--error); }
+
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+
+  .footer-note{
+    text-align:center;
+    font-size:.78rem;
+    color:var(--ink-soft);
+    margin-top:28px;
+  }
+
+  @media (max-width:880px){
+    .shell{ flex-direction:column; }
+    .brand-pane{ flex:none; min-height:260px; }
+    .brand-mid{ padding:18px 0; }
+    .brand-stats{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- اللوحة اليسرى -->
+  <div class="brand-pane">
+    <svg class="plot-grid" viewBox="0 0 600 600" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <g stroke="#E8C97A" stroke-width="1" fill="none">
+        <path d="M0 80 L600 40"/>
+        <path d="M0 180 L600 150"/>
+        <path d="M0 300 L600 260"/>
+        <path d="M0 410 L600 440"/>
+        <path d="M0 520 L600 560"/>
+        <path d="M90 0 L40 600"/>
+        <path d="M230 0 L190 600"/>
+        <path d="M360 0 L400 600"/>
+        <path d="M480 0 L520 600"/>
+      </g>
+    </svg>
+    <div class="brand-top">
+      <div class="brand-mark">حم</div>
+      <div class="brand-name">حاسبة مساحات الأراضي</div>
+    </div>
+    <div class="brand-mid">
+      <h1>إدارة دقيقة لمساحات وأسعار<br/>الأراضي الزراعية</h1>
+      <div class="gold-rule"></div>
+      <p>سجّل دخولك للوصول إلى قاعدة بيانات الأحواض والمستأجرين، واحسب المساحات بالفدان والقيراط والسهم بدقة، مع إمكانية حفظ حساباتك ومتابعتها من أي جهاز.</p>
+    </div>
+    <div class="brand-stats">
+      <div class="brand-stat"><strong>فدان · قيراط · سهم</strong><span>وحدات المساحة المصرية</span></div>
+      <div class="brand-stat"><strong>دخول آمن</strong><span>بالبريد وكلمة المرور</span></div>
+    </div>
+  </div>
+
+  <!-- اللوحة اليمنى: النموذج -->
+  <div class="form-pane">
+    <div class="card">
+
+      <!-- خطوة 1: تبويبات الدخول/التسجيل -->
+      <div id="authStep">
+        <h2>مرحباً بك</h2>
+        <p class="sub">سجّل الدخول أو أنشئ حساباً جديداً للمتابعة</p>
+
+        <div class="tabs">
+          <button class="tab-btn active" id="tabLogin" onclick="switchTab('login')">تسجيل الدخول</button>
+          <button class="tab-btn" id="tabSignup" onclick="switchTab('signup')">حساب جديد</button>
+        </div>
+
+        <!-- تسجيل الدخول بالبريد وكلمة المرور -->
+        <div class="panel active" id="panelLogin">
+          <form id="loginForm">
+            <div class="field">
+              <label for="loginEmail">البريد الإلكتروني</label>
+              <input type="email" id="loginEmail" placeholder="example@email.com" required autocomplete="email"/>
+            </div>
+            <div class="field">
+              <label for="loginPassword">كلمة المرور</label>
+              <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password"/>
+            </div>
+            <button type="submit" class="btn-primary" id="loginBtn">تسجيل الدخول</button>
+          </form>
+        </div>
+
+        <!-- حساب جديد: الاسم الكامل + الجوال/واتساب + البريد + كلمة المرور -->
+        <div class="panel" id="panelSignup">
+          <form id="signupForm">
+            <div class="field">
+              <label for="suFullName">الاسم بالكامل</label>
+              <input type="text" id="suFullName" placeholder="مثال: أحمد محمد علي" required autocomplete="name"/>
+            </div>
+            <div class="field">
+              <label for="suPhone">رقم الجوال (واتساب)</label>
+              <input type="tel" id="suPhone" placeholder="مثال: 0100xxxxxxx" required autocomplete="tel"/>
+            </div>
+            <div class="field">
+              <label for="suEmail">البريد الإلكتروني</label>
+              <input type="email" id="suEmail" placeholder="example@email.com" required autocomplete="email"/>
+            </div>
+            <div class="field">
+              <label for="suPassword">كلمة المرور</label>
+              <input type="password" id="suPassword" placeholder="6 أحرف على الأقل" required minlength="6" autocomplete="new-password"/>
+              <div class="hint">اختر كلمة مرور لا تقل عن 6 أحرف، وستحتاجها لاحقًا لتسجيل الدخول.</div>
+            </div>
+            <button type="submit" class="btn-primary" id="signupBtn">إنشاء الحساب والدخول</button>
+          </form>
+        </div>
+
+        <div class="msg" id="authMsg"></div>
+      </div>
+
+      <p class="footer-note">بياناتك محمية ولن تُستخدم إلا لغرض الدخول إلى النظام.</p>
+    </div>
+  </div>
+</div>
+
+<script src="assets/config.js"></script>
+<script>
+function switchTab(tab){
+  document.getElementById('tabLogin').classList.toggle('active', tab==='login');
+  document.getElementById('tabSignup').classList.toggle('active', tab==='signup');
+  document.getElementById('panelLogin').classList.toggle('active', tab==='login');
+  document.getElementById('panelSignup').classList.toggle('active', tab==='signup');
+  hideMsg('authMsg');
+}
+
+function showMsg(id, text, type){
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'msg show ' + type;
+}
+function hideMsg(id){
+  const el = document.getElementById(id);
+  el.className = 'msg';
+}
+
+function setLoading(btn, loading, defaultText){
+  btn.disabled = loading;
+  btn.textContent = loading ? 'جارٍ المعالجة...' : defaultText;
+}
+
+// ---- تسجيل الدخول (مستخدم موجود) ----
+document.getElementById('loginForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const btn = document.getElementById('loginBtn');
+  setLoading(btn, true, 'تسجيل الدخول');
+  hideMsg('authMsg');
+
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+  setLoading(btn, false, 'تسجيل الدخول');
+
+  if(error){
+    showMsg('authMsg', 'البريد أو كلمة المرور غير صحيحة، أو لا يوجد حساب بهذا البريد.', 'err');
+    return;
+  }
+  window.location.href = 'app.html';
+});
+
+// ---- إنشاء حساب جديد ----
+document.getElementById('signupForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const fullName = document.getElementById('suFullName').value.trim();
+  const phone = document.getElementById('suPhone').value.trim();
+  const email = document.getElementById('suEmail').value.trim();
+  const password = document.getElementById('suPassword').value;
+  const btn = document.getElementById('signupBtn');
+  setLoading(btn, true, 'إنشاء الحساب والدخول');
+  hideMsg('authMsg');
+
+  const { data, error } = await supabaseClient.auth.signUp({
+    email,
+    password,
+    options:{
+      data:{ full_name: fullName, phone: phone }
+    }
+  });
+
+  setLoading(btn, false, 'إنشاء الحساب والدخول');
+
+  if(error){
+    showMsg('authMsg', 'تعذّر إنشاء الحساب: ' + error.message, 'err');
+    return;
+  }
+
+  // إذا كانت "Confirm email" مفعّلة في إعدادات Supabase فلن تُنشأ جلسة فورية
+  if(!data.session){
+    showMsg('authMsg', 'تم إنشاء الحساب. الرجاء تعطيل خيار "Confirm email" من إعدادات Supabase ليتم الدخول مباشرة بدون بريد تحقق، ثم سجّل الدخول بكلمة المرور.', 'ok');
+    return;
+  }
+
+  window.location.href = 'app.html';
+});
+
+// إذا كانت هناك جلسة دخول فعّالة بالفعل، انتقل مباشرة للتطبيق
+(async ()=>{
+  const { data } = await supabaseClient.auth.getSession();
+  if(data && data.session){
+    window.location.href = 'app.html';
+  }
+})();
+</script>
+</body>
+</html>
