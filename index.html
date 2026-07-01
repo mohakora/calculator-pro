@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>السجل الزراعي — نظام إدارة الإيجارات الزراعية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   نظام التصميم: "السجل الرسمي"
+   ورق قديم + حبر أخضر داكن + نحاس
+   ============================================================ */
+:root {
+  --paper:        #F4EFE1;
+  --paper-deep:   #ECE4D0;
+  --ink:          #1E2A1C;
+  --ink-soft:     #44523D;
+  --ink-faint:    #6E7A64;
+  --brass:        #9C7A33;
+  --brass-bright: #C7973F;
+  --clay:         #8B4F39;
+  --line:         #D8CFB8;
+  --white:        #FFFDF8;
+  --danger:       #9C3B2E;
+  --ok:           #4C6B3F;
+  --font-d: 'Amiri', serif;
+  --font-b: 'IBM Plex Sans Arabic', sans-serif;
+  --font-m: 'IBM Plex Mono', monospace;
+  --sh: 0 1px 0 rgba(30,42,28,.06), 0 8px 24px -16px rgba(30,42,28,.35);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:var(--font-b);font-size:15px;line-height:1.55;background:var(--paper);color:var(--ink)}
+h1,h2,h3{font-family:var(--font-d);font-weight:700}
+button,input,select,textarea{font-family:var(--font-b);font-size:14px}
+
+/* ── شاشة إعداد / خطأ ── */
+#setup-screen{display:none;position:fixed;inset:0;background:radial-gradient(circle at 20% 20%,rgba(156,122,51,.08),transparent 45%),var(--paper);align-items:center;justify-content:center;z-index:9999;padding:20px}
+#setup-screen.show{display:flex}
+.setup-card{width:100%;max-width:440px;background:var(--white);border:1px solid var(--line);box-shadow:var(--sh);padding:36px 32px;text-align:center}
+.setup-card .seal-big{width:56px;height:56px;border-radius:50%;border:2px solid var(--brass);display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:22px;color:var(--brass);margin:0 auto 14px;position:relative}
+.setup-card .seal-big::before{content:'';position:absolute;inset:4px;border:1px solid var(--brass);border-radius:50%;opacity:.55}
+.setup-card h2{font-size:20px;margin-bottom:6px}
+.setup-card p{font-size:13px;color:var(--ink-soft);margin-bottom:16px}
+.setup-form-field{text-align:right;margin-bottom:14px}
+.setup-form-field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:5px}
+.setup-form-field input{width:100%;padding:9px 11px;border:1px solid var(--line);background:var(--white);color:var(--ink);border-radius:2px}
+.setup-form-field input:focus{outline:2px solid var(--brass-bright);border-color:var(--brass)}
+.note{background:rgba(156,122,51,.08);border:1px solid var(--brass);padding:10px 12px;font-size:12px;color:var(--ink-soft);text-align:right;margin-bottom:16px;line-height:1.7}
+.note a{color:var(--clay)}
+.note code{background:rgba(30,42,28,.08);padding:1px 5px;font-family:var(--font-m);font-size:11px;border-radius:2px}
+
+/* ── تخطيط عام ── */
+#app{display:none;flex-direction:column;min-height:100vh}
+#app.show{display:flex}
+
+/* ── شريط علوي ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:13px 28px;border-bottom:1px solid var(--line);background:var(--white);flex-shrink:0}
+.brand{display:flex;align-items:center;gap:12px}
+.seal{width:40px;height:40px;border-radius:50%;border:2px solid var(--brass);display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:17px;color:var(--brass);position:relative;flex-shrink:0}
+.seal::before{content:'';position:absolute;inset:4px;border:1px solid var(--brass);border-radius:50%;opacity:.5}
+.brand-text h1{font-size:18px;line-height:1.2}
+.brand-text small{font-family:var(--font-m);font-size:11px;color:var(--ink-faint);letter-spacing:.03em}
+.user-info{display:flex;align-items:center;gap:12px}
+.role-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px 3px 6px;border-radius:999px;font-size:11.5px;font-weight:600;border:1px solid currentColor}
+.role-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.role-admin{color:var(--clay);background:rgba(139,79,57,.08)}
+.role-manager{color:var(--ink-soft);background:rgba(68,82,61,.08)}
+.role-viewer{color:var(--ink-faint);background:rgba(110,122,100,.08)}
+
+/* ── تخطيط القسمين ── */
+.main-layout{display:flex;flex:1;min-height:0}
+
+/* ── الشريط الجانبي ── */
+.sidebar{width:220px;flex-shrink:0;border-left:1px solid var(--line);background:var(--white);padding:18px 0;display:flex;flex-direction:column}
+.nav-item{display:flex;align-items:center;gap:9px;padding:11px 22px;color:var(--ink-soft);font-size:14px;cursor:pointer;border-right:3px solid transparent;transition:background .14s,border-color .14s,color .14s;user-select:none}
+.nav-item:hover{background:var(--paper)}
+.nav-item.active{border-right-color:var(--brass);color:var(--ink);font-weight:600;background:var(--paper)}
+.nav-tag{margin-inline-start:auto;font-family:var(--font-m);font-size:11px;color:var(--ink-faint)}
+.nav-icon{font-size:16px;width:20px;text-align:center}
+
+/* ── المحتوى الرئيسي ── */
+.content{flex:1;padding:28px 34px;overflow-y:auto}
+
+/* ── رأس الصفحة ── */
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.eyebrow{font-family:var(--font-m);font-size:11px;letter-spacing:.08em;color:var(--brass);text-transform:uppercase;display:block;margin-bottom:3px}
+.page-head h2{font-size:23px}
+.page-sub{color:var(--ink-faint);font-size:13px;margin-top:3px}
+
+/* ── بطاقات إحصائية ── */
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:13px;margin-bottom:24px}
+.stat-card{background:var(--white);border:1px solid var(--line);padding:16px 18px}
+.stat-num{font-family:var(--font-d);font-size:30px;font-weight:700}
+.stat-label{font-size:12.5px;color:var(--ink-faint);margin-top:1px}
+.stat-card.danger .stat-num{color:var(--danger)}
+
+/* ── شريط الأدوات ── */
+.toolbar{display:flex;align-items:center;gap:11px;margin-bottom:13px}
+.toolbar input{padding:8px 13px;border:1px solid var(--line);background:var(--white);width:260px;border-radius:2px;color:var(--ink)}
+.toolbar input:focus{outline:2px solid var(--brass-bright);border-color:var(--brass)}
+
+/* ── جدول السجل ── */
+.table-wrap{background:var(--white);border:1px solid var(--line);box-shadow:var(--sh);overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:right;font-size:11.5px;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.03em;padding:11px 15px;border-bottom:1px solid var(--line);background:var(--paper);white-space:nowrap}
+td{padding:12px 15px;font-size:13.5px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(156,122,51,.04)}
+.mono{font-family:var(--font-m);font-size:12.5px;color:var(--ink-soft)}
+.muted{color:var(--ink-faint)}
+.row-actions{display:flex;gap:7px;justify-content:flex-end}
+
+/* ── أزرار ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 17px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);font-size:13.5px;font-weight:600;cursor:pointer;border-radius:2px;transition:opacity .14s}
+.btn:hover{opacity:.87}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-outline{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn-outline:hover{border-color:var(--ink)}
+.btn-danger{background:var(--danger);border-color:var(--danger);color:var(--white)}
+.btn-text{background:none;border:none;color:var(--clay);font-size:13px;font-weight:600;cursor:pointer;padding:3px 7px}
+.btn-text:hover{text-decoration:underline}
+.btn-text.del{color:var(--danger)}
+.btn-sm{padding:6px 12px;font-size:12.5px}
+
+/* ── نماذج ── */
+.field{margin-bottom:15px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%;padding:9px 11px;border:1px solid var(--line);background:var(--white);border-radius:2px;color:var(--ink)}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--brass-bright);border-color:var(--brass)}
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 15px}
+.field-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 12px}
+
+/* ── نافذة منبثقة ── */
+.modal-bg{position:fixed;inset:0;background:rgba(30,42,28,.45);display:flex;align-items:flex-start;justify-content:center;padding:50px 20px;z-index:200;overflow-y:auto}
+.modal{width:100%;max-width:560px;background:var(--paper);border:1px solid var(--brass);box-shadow:var(--sh)}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:17px 21px;border-bottom:1px solid var(--line)}
+.modal-head h3{font-size:18px}
+.modal-body{padding:21px;max-height:62vh;overflow-y:auto}
+.modal-foot{display:flex;justify-content:flex-end;gap:9px;padding:15px 21px;border-top:1px solid var(--line)}
+.modal-close{background:none;border:none;font-size:21px;cursor:pointer;color:var(--ink-faint);line-height:1}
+
+/* ── رسائل ── */
+.alert-err{background:rgba(156,59,46,.08);border:1px solid var(--danger);color:var(--danger);padding:9px 12px;font-size:12.5px;margin-bottom:13px}
+.alert-ok{background:rgba(76,107,63,.08);border:1px solid var(--ok);color:var(--ok);padding:9px 12px;font-size:12.5px;margin-bottom:13px}
+
+/* ── شاشة تسجيل الدخول ── */
+#login-screen{display:none;position:fixed;inset:0;background:radial-gradient(circle at 20% 20%,rgba(156,122,51,.08),transparent 45%),var(--paper);align-items:center;justify-content:center;z-index:100;padding:20px}
+#login-screen.show{display:flex}
+.login-card{width:100%;max-width:370px;background:var(--white);border:1px solid var(--line);box-shadow:var(--sh);padding:36px 32px;text-align:center}
+.login-card .seal{width:54px;height:54px;font-size:20px;margin:0 auto 13px}
+.login-card h1{font-size:21px;margin-bottom:4px}
+.login-card .tagline{font-family:var(--font-m);font-size:12px;color:var(--ink-faint);margin:0 0 26px}
+.login-card form{text-align:right}
+
+/* ── حالة فارغة ── */
+.empty{text-align:center;padding:55px 20px;color:var(--ink-faint)}
+.empty .seal{margin:0 auto 13px;opacity:.45;width:44px;height:44px;font-size:16px}
+.empty p{font-size:13.5px;margin:4px 0 16px}
+
+/* ── مؤشر التحميل ── */
+.loading{font-family:var(--font-m);font-size:12.5px;color:var(--ink-faint);padding:24px;text-align:center}
+
+/* ── إشعار منبثق (toast) ── */
+#toast{position:fixed;bottom:22px;right:22px;z-index:9000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast-msg{padding:11px 18px;font-size:13px;font-weight:600;border:1px solid;border-radius:2px;opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s;pointer-events:auto}
+.toast-msg.show{opacity:1;transform:translateY(0)}
+.toast-ok{background:rgba(76,107,63,.95);color:var(--white);border-color:var(--ok)}
+.toast-err{background:rgba(156,59,46,.95);color:var(--white);border-color:var(--danger)}
+
+/* ── لوحة معلومات السجل ── */
+.info-card{background:var(--white);border:1px solid var(--line);box-shadow:var(--sh);padding:22px 24px;margin-top:20px}
+.info-card h3{font-size:17px;margin-bottom:10px}
+.info-card p{font-size:13.5px;color:var(--ink-soft);line-height:1.8}
+
+/* ── استجابة الشاشة ── */
+@media(max-width:820px){
+  .main-layout{flex-direction:column}
+  .sidebar{width:100%;flex-direction:row;overflow-x:auto;padding:4px 0;flex-wrap:nowrap;border-left:none;border-bottom:1px solid var(--line)}
+  .nav-item{padding:9px 14px;flex-shrink:0}
+  .nav-tag{display:none}
+  .content{padding:18px 14px}
+  .field-grid,.field-grid3{grid-template-columns:1fr}
+  .topbar{padding:11px 14px}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     شاشة الإعداد الأولي (تُظهر مرة واحدة فقط)
+     ═══════════════════════════════════════════ -->
+<div id="setup-screen">
+  <div class="setup-card">
+    <div class="seal-big">سج</div>
+    <h2>إعداد الاتصال بقاعدة البيانات</h2>
+    <p>أدخل بيانات مشروع Supabase مرة واحدة وسيتم حفظها تلقائياً</p>
+
+    <div class="note">
+      ابحث عن هذه البيانات في Supabase من:<br>
+      <strong>Project Settings → API</strong><br>
+      • <code>Project URL</code> → انسخه في الحقل الأول<br>
+      • <code>anon / public key</code> → انسخه في الحقل الثاني
+    </div>
+
+    <div id="setup-err" class="alert-err" style="display:none"></div>
+
+    <div class="setup-form-field">
+      <label>Project URL</label>
+      <input id="setup-url" type="url" placeholder="https://xxxxxxxxxxxx.supabase.co" />
+    </div>
+    <div class="setup-form-field">
+      <label>Anon Public Key</label>
+      <input id="setup-key" type="text" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6Ikp..." />
+    </div>
+    <button class="btn" style="width:100%;justify-content:center" onclick="saveSetup()">حفظ والمتابعة</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     شاشة تسجيل الدخول
+     ═══════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="seal">سج</div>
+    <h1>السجل الزراعي</h1>
+    <p class="tagline">نظام إدارة الإيجارات الزراعية</p>
+    <div id="login-err" class="alert-err" style="display:none"></div>
+    <form onsubmit="doLogin(event)">
+      <div class="field">
+        <label>البريد الإلكتروني</label>
+        <input id="li-email" type="email" required placeholder="name@example.com" autocomplete="username" />
+      </div>
+      <div class="field">
+        <label>كلمة المرور</label>
+        <input id="li-pass" type="password" required placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <button class="btn" id="li-btn" style="width:100%;justify-content:center">تسجيل الدخول</button>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     التطبيق الرئيسي
+     ═══════════════════════════════════════════ -->
+<div id="app">
+  <!-- الشريط العلوي -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="seal">سج</div>
+      <div class="brand-text">
+        <h1>السجل الزراعي</h1>
+        <small>نظام إدارة الإيجارات الزراعية</small>
+      </div>
+    </div>
+    <div class="user-info">
+      <span id="user-badge" class="role-badge"></span>
+      <button class="btn btn-outline btn-sm" onclick="doLogout()">تسجيل الخروج</button>
+    </div>
+  </header>
+
+  <div class="main-layout">
+    <!-- الشريط الجانبي -->
+    <aside class="sidebar">
+      <div class="nav-item active" onclick="navigate('home')" id="nav-home">
+        <span class="nav-icon">⌂</span> الرئيسية <span class="nav-tag">00</span>
+      </div>
+      <div class="nav-item" onclick="navigate('tenants')" id="nav-tenants">
+        <span class="nav-icon">◉</span> المستأجرون <span class="nav-tag">01</span>
+      </div>
+      <div class="nav-item" onclick="navigate('parcels')" id="nav-parcels">
+        <span class="nav-icon">◫</span> القطع الزراعية <span class="nav-tag">02</span>
+      </div>
+      <div class="nav-item" onclick="navigate('infringements')" id="nav-infringements">
+        <span class="nav-icon">⚑</span> التعديات <span class="nav-tag">03</span>
+      </div>
+      <div class="nav-item" onclick="navigate('documents')" id="nav-documents">
+        <span class="nav-icon">◱</span> الوثائق <span class="nav-tag">04</span>
+      </div>
+    </aside>
+
+    <!-- المحتوى -->
+    <main class="content" id="main-content">
+      <div class="loading">جارٍ تحميل البيانات…</div>
+    </main>
+  </div>
+</div>
+
+<!-- نافذة منبثقة عامة -->
+<div id="modal-bg" class="modal-bg" style="display:none" onclick="onModalBgClick(event)">
+  <div class="modal" id="modal-box">
+    <div class="modal-head">
+      <h3 id="modal-title"></h3>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot" id="modal-foot"></div>
+  </div>
+</div>
+
+<!-- إشعارات منبثقة -->
+<div id="toast"></div>
+
+<!-- ═══════════════════════════════════════════
+     Supabase من CDN
+     ═══════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<script>
+/* ════════════════════════════════════════════════════════
+   0. متغيرات عامة
+   ════════════════════════════════════════════════════════ */
+let SB = null          // عميل Supabase
+let currentUser = null // المستخدم الحالي
+let currentRole = null // دوره
+let currentFullName = null
+let currentPage = 'home'
+
+/* ════════════════════════════════════════════════════════
+   1. الإعداد الأولي — حفظ/قراءة بيانات Supabase
+   ════════════════════════════════════════════════════════ */
+function getSavedConfig() {
+  try {
+    return {
+      url: localStorage.getItem('sb_url'),
+      key: localStorage.getItem('sb_key')
+    }
+  } catch { return { url: null, key: null } }
+}
+
+function saveSetup() {
+  const url = document.getElementById('setup-url').value.trim()
+  const key = document.getElementById('setup-key').value.trim()
+  const errEl = document.getElementById('setup-err')
+
+  if (!url || !url.startsWith('https://')) {
+    errEl.textContent = 'أدخل Project URL صحيحاً يبدأ بـ https://'
+    errEl.style.display = 'block'
+    return
+  }
+  if (!key || key.length < 20) {
+    errEl.textContent = 'أدخل Anon Key صحيحاً'
+    errEl.style.display = 'block'
+    return
+  }
+  errEl.style.display = 'none'
+  localStorage.setItem('sb_url', url)
+  localStorage.setItem('sb_key', key)
+  initSupabase(url, key)
+}
+
+function initSupabase(url, key) {
+  SB = supabase.createClient(url, key)
+  document.getElementById('setup-screen').classList.remove('show')
+  checkSession()
+}
+
+/* ════════════════════════════════════════════════════════
+   2. المصادقة
+   ════════════════════════════════════════════════════════ */
+async function checkSession() {
+  const { data: { session } } = await SB.auth.getSession()
+  if (session) {
+    await loadUserInfo(session.user)
+    showApp()
+  } else {
+    showLoginScreen()
+  }
+}
+
+async function loadUserInfo(user) {
+  currentUser = user
+  const { data } = await SB.from('user_roles')
+    .select('role, full_name')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  currentRole = data?.role || 'viewer'
+  currentFullName = data?.full_name || user.email
+}
+
+async function doLogin(e) {
+  e.preventDefault()
+  const email = document.getElementById('li-email').value
+  const pass  = document.getElementById('li-pass').value
+  const btn   = document.getElementById('li-btn')
+  const err   = document.getElementById('login-err')
+
+  btn.disabled = true
+  btn.textContent = 'جارٍ التحقق…'
+  err.style.display = 'none'
+
+  const { data, error } = await SB.auth.signInWithPassword({ email, password: pass })
+
+  btn.disabled = false
+  btn.textContent = 'تسجيل الدخول'
+
+  if (error) {
+    err.textContent = error.message.includes('Invalid') ? 'البريد أو كلمة المرور غير صحيحة.' : error.message
+    err.style.display = 'block'
+    return
+  }
+  await loadUserInfo(data.user)
+  showApp()
+}
+
+async function doLogout() {
+  await SB.auth.signOut()
+  currentUser = currentRole = currentFullName = null
+  document.getElementById('app').classList.remove('show')
+  showLoginScreen()
+}
+
+/* ════════════════════════════════════════════════════════
+   3. عرض الشاشات
+   ════════════════════════════════════════════════════════ */
+function showLoginScreen() {
+  document.getElementById('login-screen').classList.add('show')
+  document.getElementById('app').classList.remove('show')
+}
+
+function showApp() {
+  document.getElementById('login-screen').classList.remove('show')
+  const app = document.getElementById('app')
+  app.classList.add('show')
+  // شارة الدور
+  const badge = document.getElementById('user-badge')
+  const roleLabel = { admin: 'مدير', manager: 'محرر', viewer: 'مشاهد' }[currentRole] || '?'
+  badge.className = `role-badge role-${currentRole}`
+  badge.innerHTML = `<span class="dot"></span> ${currentFullName} — ${roleLabel}`
+  // عرض الصفحة الرئيسية
+  navigate('home')
+}
+
+function navigate(page) {
+  currentPage = page
+  // تحديث القائمة
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'))
+  const navEl = document.getElementById(`nav-${page}`)
+  if (navEl) navEl.classList.add('active')
+  // عرض الصفحة
+  const handlers = { home, tenants, parcels, infringements, documents }
+  if (handlers[page]) handlers[page]()
+}
+
+/* ════════════════════════════════════════════════════════
+   4. الصفحة الرئيسية
+   ════════════════════════════════════════════════════════ */
+async function home() {
+  setContent('<div class="loading">جارٍ تحميل الإحصائيات…</div>')
+
+  const [t, p, inf, d] = await Promise.all([
+    SB.from('tenants').select('*', { count: 'exact', head: true }).is('deleted_at', null),
+    SB.from('parcels').select('*', { count: 'exact', head: true }).is('deleted_at', null),
+    SB.from('infringements').select('*', { count: 'exact', head: true }).is('deleted_at', null),
+    SB.from('documents').select('*', { count: 'exact', head: true }).is('deleted_at', null),
+  ])
+
+  const roleLabel = { admin: 'مدير النظام', manager: 'محرر', viewer: 'مشاهد فقط' }[currentRole] || '—'
+
+  setContent(`
+    <div class="page-head">
+      <div>
+        <span class="eyebrow">لوحة القيد</span>
+        <h2>مرحباً، ${escH(currentFullName || 'بك')}</h2>
+        <p class="page-sub">صلاحيتك الحالية: ${roleLabel}</p>
+      </div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-num">${t.count ?? 0}</div>
+        <div class="stat-label">مستأجر مسجَّل</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">${p.count ?? 0}</div>
+        <div class="stat-label">قطعة زراعية</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="stat-num">${inf.count ?? 0}</div>
+        <div class="stat-label">تعدٍ مسجَّل</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">${d.count ?? 0}</div>
+        <div class="stat-label">وثيقة محفوظة</div>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3>دليل البدء السريع</h3>
+      <p>
+        استخدم القائمة الجانبية للتنقل بين سجل المستأجرين، القطع الزراعية، التعديات، والوثائق.<br>
+        كل سجل فرعي مرتبط بمستأجر، لذا يُفضَّل تسجيل المستأجر أولاً ثم إضافة قطعه ووثائقه.
+      </p>
+    </div>
+  `)
+}
+
+/* ════════════════════════════════════════════════════════
+   5. صفحة المستأجرين
+   ════════════════════════════════════════════════════════ */
+async function tenants(searchVal = '') {
+  setContent('<div class="loading">جارٍ تحميل سجل المستأجرين…</div>')
+
+  let q = SB.from('tenants').select('*').is('deleted_at', null).order('created_at', { ascending: false })
+  if (searchVal) q = q.or(`name.ilike.%${searchVal}%,district.ilike.%${searchVal}%,journal.ilike.%${searchVal}%,phone.ilike.%${searchVal}%`)
+
+  const { data, error } = await q
+  if (error) { setContent(`<div class="alert-err">${error.message}</div>`); return }
+
+  const canWrite = currentRole === 'admin' || currentRole === 'manager'
+  const isAdmin  = currentRole === 'admin'
+
+  const rows = (data || []).map(t => `
+    <tr>
+      <td class="mono">${escH(t.journal || '—')}</td>
+      <td><strong>${escH(t.name)}</strong></td>
+      <td class="muted">${escH(t.district || '—')}</td>
+      <td class="mono">${t.feddan ?? 0}</td>
+      <td>
+        <span class="role-badge ${t.infringements_count > 0 ? 'role-admin' : 'role-viewer'}" style="font-size:11px">
+          <span class="dot"></span> ${t.infringements_count}
+        </span>
+      </td>
+      <td class="mono">${escH(t.phone || '—')}</td>
+      ${canWrite ? `<td><div class="row-actions">
+        <button class="btn-text" onclick="tenantEdit('${t.id}')">تعديل</button>
+        ${isAdmin ? `<button class="btn-text del" onclick="tenantDelete('${t.id}','${escH(t.name)}')">حذف</button>` : ''}
+      </div></td>` : ''}
+    </tr>
+  `).join('')
+
+  setContent(`
+    <div class="page-head">
+      <div>
+        <span class="eyebrow">سجل المستأجرين</span>
+        <h2>المستأجرون</h2>
+        <p class="page-sub">${(data || []).length} مستأجر مسجَّل في النظام</p>
+      </div>
+      ${canWrite ? `<button class="btn" onclick="tenantCreate()">+ تسجيل مستأجر</button>` : ''}
+    </div>
+    <div class="toolbar">
+      <input type="search" placeholder="ابحث بالاسم، المنطقة، رقم القيد، الهاتف…"
+        value="${escH(searchVal)}"
+        oninput="tenants(this.value)" />
+    </div>
+    ${rows.length === 0 ? emptyState('لا توجد سجلات', canWrite ? `<button class="btn" onclick="tenantCreate()">+ تسجيل مستأجر</button>` : '') : `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>رقم القيد</th><th>الاسم</th><th>المنطقة</th>
+            <th>الفدان</th><th>التعديات</th><th>الهاتف</th>
+            ${canWrite ? '<th></th>' : ''}
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`}
+  `)
+}
+
+function tenantCreate() {
+  openModal('تسجيل مستأجر جديد', tenantForm(null), `
+    <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+    <button class="btn" onclick="tenantSave(null)">حفظ</button>
+  `)
+}
+
+async function tenantEdit(id) {
+  const { data } = await SB.from('tenants').select('*').eq('id', id).single()
+  openModal('تعديل بيانات المستأجر', tenantForm(data), `
+    <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+    <button class="btn" onclick="tenantSave('${id}')">حفظ التعديلات</button>
+  `)
+}
+
+function tenantForm(t) {
+  const v = (k, fallback = '') => escH(t?.[k] ?? fallback)
+  return `
+    <div id="form-err" class="alert-err" style="display:none"></div>
+    <div class="field-grid">
+      <div class="field"><label>رقم القيد (الجورنال)</label><input id="f-journal" value="${v('journal')}" /></div>
+      <div class="field"><label>الاسم *</label><input id="f-name" required value="${v('name')}" /></div>
+    </div>
+    <div class="field-grid">
+      <div class="field"><label>المنطقة</label><input id="f-district" value="${v('district')}" /></div>
+      <div class="field"><label>حائز اليد</label><input id="f-hand_holder" value="${v('hand_holder')}" /></div>
+    </div>
+    <div class="field-grid3">
+      <div class="field"><label>سهم</label><input id="f-sahm" type="number" step="0.01" value="${v('sahm', 0)}" /></div>
+      <div class="field"><label>قيراط</label><input id="f-qirat" type="number" step="0.01" value="${v('qirat', 0)}" /></div>
+      <div class="field"><label>فدان</label><input id="f-feddan" type="number" step="0.01" value="${v('feddan', 0)}" /></div>
+    </div>
+    <div class="field-grid">
+      <div class="field"><label>الهاتف</label><input id="f-phone" value="${v('phone')}" /></div>
+      <div class="field"><label>رابط الموقع</label><input id="f-location_url" value="${v('location_url')}" /></div>
+    </div>
+    <div class="field-grid">
+      <div class="field"><label>بداية العقد</label><input id="f-contract_start_date" type="date" value="${v('contract_start_date')}" /></div>
+      <div class="field"><label>نهاية العقد</label><input id="f-contract_end_date" type="date" value="${v('contract_end_date')}" /></div>
+    </div>
+    <div class="field"><label>ملاحظات</label><textarea id="f-notes" rows="3">${v('notes')}</textarea></div>
+  `
+}
+
+async function tenantSave(id) {
+  const name = document.getElementById('f-name')?.value?.trim()
+  if (!name) { showFormErr('الاسم حقل مطلوب.'); return }
+
+  const payload = {
+    journal: gv('f-journal'), name,
+    district: gv('f-district'), hand_holder: gv('f-hand_holder'),
+    sahm: num('f-sahm'), qirat: num('f-qirat'), feddan: num('f-feddan'),
+    phone: gv('f-phone'), location_url: gv('f-location_url'),
+    notes: gv('f-notes'),
+    contract_start_date: gv('f-contract_start_date') || null,
+    contract_end_date:   gv('f-contract_end_date')   || null,
+  }
+
+  const { error } = id
+    ? await SB.from('tenants').update(payload).eq('id', id)
+    : await SB.from('tenants').insert(payload)
+
+  if (error) { showFormErr(error.message); return }
+  closeModal()
+  toast('تم الحفظ بنجاح ✓', 'ok')
+  tenants()
+}
+
+async function tenantDelete(id, name) {
+  if (!confirm(`تأكيد حذف المستأجر "${name}"؟\nسيُنقل إلى الأرشيف (حذف منطقي).`)) return
+  const { error } = await SB.from('tenants').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+  if (error) { toast(error.message, 'err'); return }
+  toast('تم أرشفة السجل ✓', 'ok')
+  tenants()
+}
+
+/* ════════════════════════════════════════════════════════
+   6. صفحة القطع الزراعية
+   ════════════════════════════════════════════════════════ */
+async function parcels(searchVal = '') {
+  await linkedTablePage({
+    table: 'parcels',
+    eyebrow: 'سجل القطع',
+    title: 'القطع الزراعية',
+    singular: 'قطعة',
+    searchVal,
+    searchFn: parcels,
+    cols: [
+      { key: 'basin',         label: 'الحوض' },
+      { key: 'parcel_number', label: 'رقم القطعة', mono: true },
+      { key: 'location',      label: 'الموقع' },
+      { key: 'area',          label: 'المساحة (فدان)', mono: true },
+    ],
+    formFn:   parcelForm,
+    saveFn:   parcelSave,
+  })
+}
+
+function parcelForm(r) {
+  return linkedForm(r, [
+    [{ id:'f-basin', label:'الحوض' }, { id:'f-parcel_number', label:'رقم القطعة' }],
+    [{ id:'f-location', label:'الموقع' }, { id:'f-area', label:'المساحة (فدان)', type:'number' }],
+    [{ id:'f-notes', label:'ملاحظات', type:'textarea', full:true }],
+  ])
+}
+
+async function parcelSave(id) {
+  const tid = document.getElementById('f-tenant_id')?.value
+  if (!tid) { showFormErr('اختر المستأجر أولاً.'); return }
+  const payload = {
+    tenant_id: tid,
+    basin: gv('f-basin'), parcel_number: gv('f-parcel_number'),
+    location: gv('f-location'), area: num('f-area'), notes: gv('f-notes'),
+  }
+  await saveLinked('parcels', id, payload, parcels)
+}
+
+/* ════════════════════════════════════════════════════════
+   7. صفحة التعديات
+   ════════════════════════════════════════════════════════ */
+async function infringements(searchVal = '') {
+  await linkedTablePage({
+    table: 'infringements',
+    eyebrow: 'سجل التعديات',
+    title: 'التعديات',
+    singular: 'تعدٍ',
+    searchVal,
+    searchFn: infringements,
+    cols: [
+      { key: 'infringement_type', label: 'نوع التعدي' },
+      { key: 'infringer_name',    label: 'اسم المتعدي' },
+      { key: 'area',              label: 'المساحة (فدان)', mono: true },
+      { key: 'action_taken',      label: 'الإجراء المتخذ' },
+    ],
+    formFn: infringementForm,
+    saveFn: infringementSave,
+  })
+}
+
+function infringementForm(r) {
+  return linkedForm(r, [
+    [{ id:'f-infringement_type', label:'نوع التعدي *', required:true }, { id:'f-infringer_name', label:'اسم المتعدي' }],
+    [{ id:'f-area', label:'المساحة (فدان)', type:'number' }, { id:'f-action_taken', label:'الإجراء المتخذ' }],
+    [{ id:'f-notes', label:'ملاحظات', type:'textarea', full:true }],
+  ])
+}
+
+async function infringementSave(id) {
+  const tid = document.getElementById('f-tenant_id')?.value
+  if (!tid) { showFormErr('اختر المستأجر أولاً.'); return }
+  const type = gv('f-infringement_type')
+  if (!type) { showFormErr('نوع التعدي حقل مطلوب.'); return }
+  const payload = {
+    tenant_id: tid,
+    infringement_type: type,
+    infringer_name: gv('f-infringer_name'),
+    area: num('f-area'),
+    action_taken: gv('f-action_taken'),
+    notes: gv('f-notes'),
+  }
+  await saveLinked('infringements', id, payload, infringements)
+}
+
+/* ════════════════════════════════════════════════════════
+   8. صفحة الوثائق
+   ════════════════════════════════════════════════════════ */
+async function documents(searchVal = '') {
+  await linkedTablePage({
+    table: 'documents',
+    eyebrow: 'سجل الوثائق',
+    title: 'الوثائق',
+    singular: 'وثيقة',
+    searchVal,
+    searchFn: documents,
+    cols: [
+      { key: 'document_number', label: 'رقم الوثيقة', mono: true },
+      { key: 'document_type',   label: 'نوع الوثيقة' },
+      { key: 'document_date',   label: 'التاريخ' },
+    ],
+    formFn: documentForm,
+    saveFn: documentSave,
+  })
+}
+
+function documentForm(r) {
+  return linkedForm(r, [
+    [{ id:'f-document_number', label:'رقم الوثيقة' }, { id:'f-document_type', label:'نوع الوثيقة *', required:true }],
+    [{ id:'f-document_date', label:'تاريخ الوثيقة', type:'date' }, { id:'f-file_url', label:'رابط الملف' }],
+    [{ id:'f-notes', label:'ملاحظات', type:'textarea', full:true }],
+  ])
+}
+
+async function documentSave(id) {
+  const tid = document.getElementById('f-tenant_id')?.value
+  if (!tid) { showFormErr('اختر المستأجر أولاً.'); return }
+  const type = gv('f-document_type')
+  if (!type) { showFormErr('نوع الوثيقة حقل مطلوب.'); return }
+  const payload = {
+    tenant_id: tid,
+    document_number: gv('f-document_number'),
+    document_type: type,
+    document_date: gv('f-document_date') || null,
+    file_url: gv('f-file_url'),
+    notes: gv('f-notes'),
+  }
+  await saveLinked('documents', id, payload, documents)
+}
+
+/* ════════════════════════════════════════════════════════
+   9. مساعدات الجداول المرتبطة بمستأجر
+   ════════════════════════════════════════════════════════ */
+async function linkedTablePage({ table, eyebrow, title, singular, searchVal, searchFn, cols, formFn, saveFn }) {
+  setContent(`<div class="loading">جارٍ تحميل ${title}…</div>`)
+
+  let q = SB.from(table).select('*, tenants(name)').is('deleted_at', null).order('created_at', { ascending: false })
+  if (searchVal) {
+    const col = cols[0]?.key
+    if (col) q = q.ilike(col, `%${searchVal}%`)
+  }
+
+  const { data, error } = await q
+  if (error) { setContent(`<div class="alert-err">${error.message}</div>`); return }
+
+  const canWrite = currentRole === 'admin' || currentRole === 'manager'
+  const isAdmin  = currentRole === 'admin'
+
+  const rows = (data || []).map(r => `
+    <tr>
+      <td>${escH(r.tenants?.name || '—')}</td>
+      ${cols.map(c => `<td class="${c.mono ? 'mono' : ''}">${escH(r[c.key] ?? '—')}</td>`).join('')}
+      ${canWrite ? `<td><div class="row-actions">
+        <button class="btn-text" onclick="editLinked('${table}','${r.id}',${JSON.stringify(formFn).replace(/"/g,'&quot;')})">تعديل</button>
+        ${isAdmin ? `<button class="btn-text del" onclick="deleteLinked('${table}','${r.id}')">حذف</button>` : ''}
+      </div></td>` : ''}
+    </tr>
+  `).join('')
+
+  setContent(`
+    <div class="page-head">
+      <div>
+        <span class="eyebrow">${eyebrow}</span>
+        <h2>${title}</h2>
+        <p class="page-sub">${(data || []).length} سجل</p>
+      </div>
+      ${canWrite ? `<button class="btn" onclick="createLinked('${table}','${singular}')">+ إضافة ${singular}</button>` : ''}
+    </div>
+    <div class="toolbar">
+      <input type="search" placeholder="ابحث…" value="${escH(searchVal)}" oninput="${searchFn.name}(this.value)" />
+    </div>
+    ${rows.length === 0 ? emptyState(`لا توجد ${title} بعد`, canWrite ? `<button class="btn" onclick="createLinked('${table}','${singular}')">+ إضافة ${singular}</button>` : '') : `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>المستأجر</th>
+            ${cols.map(c => `<th>${c.label}</th>`).join('')}
+            ${canWrite ? '<th></th>' : ''}
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`}
+  `)
+
+  // تخزين formFn و saveFn على window لاستخدامها في الأحداث
+  window[`_formFn_${table}`] = formFn
+  window[`_saveFn_${table}`] = saveFn
+}
+
+async function createLinked(table, singular) {
+  const tenants = await fetchTenants()
+  const formFn  = window[`_formFn_${table}`]
+  const saveFn  = window[`_saveFn_${table}`]
+  openModal(`إضافة ${singular}`, tenantSelectField(tenants, '') + formFn(null), `
+    <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+    <button class="btn" onclick="${saveFn.name}(null)">حفظ</button>
+  `)
+}
+
+async function editLinked(table, id) {
+  const { data } = await SB.from(table).select('*').eq('id', id).single()
+  const tenants  = await fetchTenants()
+  const formFn   = window[`_formFn_${table}`]
+  const saveFn   = window[`_saveFn_${table}`]
+  const singular = { parcels:'قطعة', infringements:'تعدٍ', documents:'وثيقة' }[table] || 'سجل'
+  openModal(`تعديل ${singular}`, tenantSelectField(tenants, data.tenant_id) + formFn(data), `
+    <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+    <button class="btn" onclick="${saveFn.name}('${id}')">حفظ التعديلات</button>
+  `)
+}
+
+async function deleteLinked(table, id) {
+  if (!confirm('تأكيد حذف هذا السجل؟')) return
+  const { error } = await SB.from(table).update({ deleted_at: new Date().toISOString() }).eq('id', id)
+  if (error) { toast(error.message, 'err'); return }
+  toast('تم أرشفة السجل ✓', 'ok')
+  // إعادة تحميل الصفحة الحالية
+  navigate(currentPage)
+}
+
+async function saveLinked(table, id, payload, reloadFn) {
+  const { error } = id
+    ? await SB.from(table).update(payload).eq('id', id)
+    : await SB.from(table).insert(payload)
+  if (error) { showFormErr(error.message); return }
+  closeModal()
+  toast('تم الحفظ بنجاح ✓', 'ok')
+  reloadFn()
+}
+
+async function fetchTenants() {
+  const { data } = await SB.from('tenants').select('id, name').is('deleted_at', null).order('name')
+  return data || []
+}
+
+function tenantSelectField(tenants, selectedId) {
+  const opts = tenants.map(t =>
+    `<option value="${t.id}" ${t.id === selectedId ? 'selected' : ''}>${escH(t.name)}</option>`
+  ).join('')
+  return `
+    <div class="field">
+      <label>المستأجر *</label>
+      <select id="f-tenant_id">
+        <option value="">— اختر المستأجر —</option>
+        ${opts}
+      </select>
+    </div>
+  `
+}
+
+function linkedForm(r, rows) {
+  return rows.map(row => {
+    if (row.length === 1 && row[0].full) {
+      const f = row[0]
+      return `<div class="field"><label>${f.label}</label>` +
+        (f.type === 'textarea'
+          ? `<textarea id="${f.id}" rows="3">${escH(r?.[f.id.replace('f-', '')] ?? '')}</textarea>`
+          : `<input id="${f.id}" type="${f.type || 'text'}" value="${escH(r?.[f.id.replace('f-', '')] ?? '')}" />`) +
+        `</div>`
+    }
+    const cols = row.map(f => {
+      const key = f.id.replace('f-', '')
+      const val = escH(r?.[key] ?? '')
+      const inp = f.type === 'textarea'
+        ? `<textarea id="${f.id}" rows="3">${val}</textarea>`
+        : `<input id="${f.id}" type="${f.type || 'text'}" ${f.type === 'number' ? 'step="0.01"' : ''} value="${val}" ${f.required ? 'required' : ''} />`
+      return `<div class="field"><label>${f.label}</label>${inp}</div>`
+    }).join('')
+    return row.length === 2
+      ? `<div class="field-grid">${cols}</div>`
+      : `<div class="field">${cols}</div>`
+  }).join('')
+}
+
+/* ════════════════════════════════════════════════════════
+   10. أدوات مساعدة
+   ════════════════════════════════════════════════════════ */
+function setContent(html) {
+  document.getElementById('main-content').innerHTML = html
+}
+
+function escH(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+
+function gv(id) {
+  return document.getElementById(id)?.value?.trim() || ''
+}
+
+function num(id) {
+  const v = parseFloat(document.getElementById(id)?.value)
+  return isNaN(v) ? 0 : v
+}
+
+function emptyState(msg, btn = '') {
+  return `<div class="empty"><div class="seal" style="width:44px;height:44px;font-size:16px">سج</div><h3>${msg}</h3>${btn ? `<p></p>${btn}` : ''}</div>`
+}
+
+/* ── النافذة المنبثقة ── */
+function openModal(title, body, foot) {
+  document.getElementById('modal-title').textContent = title
+  document.getElementById('modal-body').innerHTML = body
+  document.getElementById('modal-foot').innerHTML = foot
+  document.getElementById('modal-bg').style.display = 'flex'
+}
+function closeModal() {
+  document.getElementById('modal-bg').style.display = 'none'
+}
+function onModalBgClick(e) {
+  if (e.target === document.getElementById('modal-bg')) closeModal()
+}
+function showFormErr(msg) {
+  const el = document.getElementById('form-err')
+  if (el) { el.textContent = msg; el.style.display = 'block' }
+}
+
+/* ── الإشعارات (toast) ── */
+function toast(msg, type = 'ok') {
+  const c = document.getElementById('toast')
+  const el = document.createElement('div')
+  el.className = `toast-msg toast-${type}`
+  el.textContent = msg
+  c.appendChild(el)
+  requestAnimationFrame(() => el.classList.add('show'))
+  setTimeout(() => {
+    el.classList.remove('show')
+    setTimeout(() => el.remove(), 300)
+  }, 3000)
+}
+
+/* ════════════════════════════════════════════════════════
+   11. نقطة الدخول — تشغيل التطبيق
+   ════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', async () => {
+  const { url, key } = getSavedConfig()
+
+  if (!url || !key) {
+    // إظهار شاشة الإعداد الأولي
+    document.getElementById('setup-screen').classList.add('show')
+    return
+  }
+
+  // الاتصال بـ Supabase
+  try {
+    initSupabase(url, key)
+  } catch (e) {
+    // إذا فشل الاتصال، أظهر شاشة الإعداد مرة أخرى
+    localStorage.removeItem('sb_url')
+    localStorage.removeItem('sb_key')
+    document.getElementById('setup-screen').classList.add('show')
+  }
+})
+</script>
+</body>
+</html>
